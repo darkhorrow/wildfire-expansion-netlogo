@@ -8,9 +8,9 @@ patches-own [
 ]
 
 to patch_init
-  set remaining-fuel random 55
+  set remaining-fuel 1 + random 55
   set heat 0
-  set burning-rate random 1.0
+  set burning-rate random-float 1.0
   set burning-threshold random 10
   set humidity 10
   set status "normal"
@@ -24,19 +24,19 @@ to patch_render
 end
 
 to patch_fuel_update
-  if status = "normal" [
-    if heat > burning-threshold [set status "burning"]
-  ]
-  if status = "burning" [
-    set remaining-fuel remaining-fuel - burning-rate * heat
-    if remaining-fuel <= 0 [set status "burnt" set heat 0]
-  ]
+  set remaining-fuel remaining-fuel - heat
+end
+
+to patch_status_update
+  ifelse remaining-fuel <= 0 
+  	[set status "burnt"]
+  	[if heat > 0 [set status "burning"]]
 end
 
 to patch_heat_update
-  if status != 0 [ 
-  	set heat max (list heat max [heat] of neighbors)
-  ]
+  if status = "normal" [set heat normal-heat]
+  if status = "burning" [set heat burning-heat]
+  if status = "burnt" [set heat burnt-heat]
 end
 
 
@@ -46,20 +46,34 @@ to setup
   ask n-of n patches [patch_init]
   ask one-of patches with [status = "normal"] [
     set status "burning"
-    set heat random 18
+    set heat 1.0 + random-float 18.0
   	]
   ask patches [patch_render]
   reset-ticks
 end
 
 to go
-  ; Get alive neighbors
-  ask patches [patch_heat_update]
+  ; Update heat in burning trees and its neighbors
+  ask patches with [status != 0] [patch_heat_update]
   ; Update patches status
-  ask patches [patch_fuel_update]
+  ask patches with [status != 0] [patch_fuel_update]
+  ;
+  ask patches with [status != 0] [patch_status_update]
   ; Render patches
   ask patches [patch_render]
   tick
+end
+
+to-report burnt-heat
+  report 0
+end
+
+to-report burning-heat
+  report heat + burning-rate
+end
+
+to-report normal-heat
+  report max [heat] of neighbors
 end
 
 to-report burning-color
