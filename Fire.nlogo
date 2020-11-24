@@ -3,14 +3,11 @@ patches-own [
   burning-rate
   burning-threshold
   remaining-fuel
-  ;wind-speed
-  ;wind-direction
   humidity
   heat
 ]
 
 to patch_init
-  ;set alive? true
   set remaining-fuel random 55
   set heat 0
   set burning-rate random 1.0
@@ -26,14 +23,20 @@ to patch_render
   if status = 0 [set pcolor 35]
 end
 
-to patch_update
-  ;ifelse alive?
-  		;[set alive? alive_neighbors = 2 or alive_neighbors = 3]
-  		;[set alive? alive_neighbors = 3]
+to patch_fuel_update
+  if status = "normal" [
+    if heat > burning-threshold [set status "burning"]
+  ]
+  if status = "burning" [
+    set remaining-fuel remaining-fuel - burning-rate * heat
+    if remaining-fuel <= 0 [set status "burnt" set heat 0]
+  ]
 end
 
-to patch_neighbors
-  ;set alive_neighbors count neighbors with [alive? = true]
+to patch_heat_update
+  if status != 0 [ 
+  	set heat max (list heat max [heat] of neighbors)
+  ]
 end
 
 
@@ -41,19 +44,19 @@ to setup
   clear-all
   let n count patches * (density / 100)
   ask n-of n patches [patch_init]
-  ask patches [patch_render]
-  ask n-of 1 patches with [status = "normal"] [
+  ask one-of patches with [status = "normal"] [
     set status "burning"
-    set heat random 15
+    set heat random 18
   	]
+  ask patches [patch_render]
   reset-ticks
 end
 
 to go
   ; Get alive neighbors
-  ask patches [patch_neighbors]
+  ask patches [patch_heat_update]
   ; Update patches status
-  ask patches [patch_update]
+  ask patches [patch_fuel_update]
   ; Render patches
   ask patches [patch_render]
   tick
@@ -66,6 +69,7 @@ end
 to-report normal-color
   report 69 - remaining-fuel / 10
 end
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
