@@ -3,16 +3,14 @@ patches-own [
   burning-rate
   burning-threshold
   remaining-fuel
-  humidity
   heat
 ]
 
 to patch_init
   set remaining-fuel 1 + random 55
   set heat 0
-  set burning-rate random-float 1.0
-  set burning-threshold random 10
-  set humidity 10
+  set burning-rate random-float 0.5
+  set burning-threshold random 40
   set status "normal"
 end
 
@@ -30,12 +28,12 @@ end
 to patch_status_update
   ifelse remaining-fuel <= 0 
   	[set status "burnt"]
-  	[if heat > 0 [set status "burning"]]
+  [if heat > burning-threshold [set status "burning"]]
 end
 
 to patch_heat_update
   if status = "normal" [set heat normal-heat]
-  if status = "burning" [set heat burning-heat]
+  if status = "burning" [set heat burning-heat * (1 - (humidity / 100))]
   if status = "burnt" [set heat burnt-heat]
 end
 
@@ -46,22 +44,27 @@ to setup
   ask n-of n patches [patch_init]
   ask one-of patches with [status = "normal"] [
     set status "burning"
-    set heat 1.0 + random-float 18.0
+    set heat 1.0 + random-float 5.0
   	]
   ask patches [patch_render]
   reset-ticks
 end
 
 to go
-  ; Update heat in burning trees and its neighbors
   ask patches with [status != 0] [patch_heat_update]
-  ; Update patches status
   ask patches with [status != 0] [patch_fuel_update]
-  ;
   ask patches with [status != 0] [patch_status_update]
-  ; Render patches
   ask patches [patch_render]
   tick
+end
+
+to add_dirt
+  if mouse-down? [
+    ask patch round mouse-xcor round mouse-ycor[
+      set status 0
+      ask patches [patch_render]
+   	]
+  ]
 end
 
 to-report burnt-heat
@@ -99,8 +102,8 @@ GRAPHICS-WINDOW
 1
 1
 0
-1
-1
+0
+0
 1
 -16
 16
@@ -165,39 +168,9 @@ NIL
 
 SLIDER
 15
-165
+160
 185
-198
-wind-direction
-wind-direction
-0
-360
-0
-1
-1
-Degrees
-HORIZONTAL
-
-SLIDER
-15
-210
-185
-243
-wind-speed
-wind-speed
-0
-100
-50
-1
-1
-km/h
-HORIZONTAL
-
-SLIDER
-15
-255
-185
-288
+193
 density
 density
 0
@@ -207,6 +180,38 @@ density
 1
 Tree %
 HORIZONTAL
+
+SLIDER
+15
+200
+185
+233
+humidity
+humidity
+0
+100
+10
+1
+1
+%
+HORIZONTAL
+
+BUTTON
+15
+245
+195
+305
+Add dirt
+add_dirt
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 @#$#@#$#@
 ## WHAT IS IT?
 
@@ -549,7 +554,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.1.0
+NetLogo 6.2.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
